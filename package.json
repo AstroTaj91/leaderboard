@@ -1,0 +1,25 @@
+{
+  "name": "ai-defender-leaderboard",
+  "version": "1.0.0",
+  "description": "Serverless leaderboard API for AI Defender game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "json-server --watch db.json --port 3000"
+  },
+  "keywords": [
+    "leaderboard",
+    "json-server",
+    "api",
+    "serverless"
+  ],
+  "author": "Tempus Innovation",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "json-server": "^0.17.3"
+  },
+  "engines": {
+    "node": ">=14.x"
+  }
+}

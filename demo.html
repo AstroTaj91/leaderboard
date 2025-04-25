@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Defender Leaderboard Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="number"],
+        input[type="email"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .status.error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Defender Leaderboard Demo</h1>
+    
+    <div class="container">
+        <h2>Submit Score</h2>
+        <div class="form-group">
+            <label for="playerName">Player Name:</label>
+            <input type="text" id="playerName" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+            <label for="score">Score:</label>
+            <input type="number" id="score" placeholder="Enter your score">
+        </div>
+        <div class="form-group">
+            <label for="email">Email (optional):</label>
+            <input type="email" id="email" placeholder="Enter your email">
+        </div>
+        <button id="submitScore">Submit Score</button>
+        <div id="submitStatus" class="status"></div>
+    </div>
+    
+    <div class="container" style="margin-top: 20px;">
+        <h2>Leaderboard</h2>
+        <button id="refreshLeaderboard">Refresh Leaderboard</button>
+        <table id="leaderboardTable">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <tr>
+                    <td colspan="4">Loading leaderboard...</td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="leaderboardStatus" class="status"></div>
+    </div>
+
+    <script src="serverlessLeaderboardManager.js"></script>
+    <script>
+        // This is a demo implementation - in a real scenario, replace with your Vercel URL
+        const leaderboardManager = new ServerlessLeaderboardManager('http://localhost:3000');
+        
+        // Check if API is available
+        leaderboardManager.isApiAvailable()
+            .then(available => {
+                const status = document.getElementById('leaderboardStatus');
+                if (available) {
+                    status.textContent = 'Connected to leaderboard API';
+                    status.className = 'status success';
+                } else {
+                    status.textContent = 'Using local storage (API not available)';
+                    status.className = 'status error';
+                }
+                refreshLeaderboard();
+            });
+        
+        // Submit score
+        document.getElementById('submitScore').addEventListener('click', () => {
+            const playerName = document.getElementById('playerName').value.trim();
+            const score = parseInt(document.getElementById('score').value);
+            const email = document.getElementById('email').value.trim();
+            
+            if (!playerName) {
+                alert('Please enter a player name');
+                return;
+            }
+            
+            if (isNaN(score) || score < 0) {
+                alert('Please enter a valid score');
+                return;
+            }
+            
+            const submitStatus = document.getElementById('submitStatus');
+            submitStatus.textContent = 'Submitting score...';
+            submitStatus.className = 'status';
+            
+            leaderboardManager.submitScore(playerName, score, email)
+                .then(() => {
+                    submitStatus.textContent = 'Score submitted successfully!';
+                    submitStatus.className = 'status success';
+                    refreshLeaderboard();
+                    
+                    // Clear form
+                    document.getElementById('playerName').value = '';
+                    document.getElementById('score').value = '';
+                    document.getElementById('email').value = '';
+                })
+                .catch(error => {
+                    submitStatus.textContent = 'Error submitting score: ' + error.message;
+                    submitStatus.className = 'status error';
+                });
+        });
+        
+        // Refresh leaderboard
+        document.getElementById('refreshLeaderboard').addEventListener('click', refreshLeaderboard);
+        
+        function refreshLeaderboard() {
+            const leaderboardBody = document.getElementById('leaderboardBody');
+            leaderboardBody.innerHTML = '<tr><td colspan="4">Loading leaderboard...</td></tr>';
+            
+            leaderboardManager.getTopScores(10)
+                .then(scores => {
+                    if (scores.length === 0) {
+                        leaderboardBody.innerHTML = '<tr><td colspan="4">No scores yet. Be the first to submit!</td></tr>';
+                        return;
+                    }
+                    
+                    leaderboardBody.innerHTML = '';
+                    scores.forEach((score, index) => {
+                        const row = document.createElement('tr');
+                        
+                        const rankCell = document.createElement('td');
+                        rankCell.textContent = index + 1;
+                        
+                        const playerCell = document.createElement('td');
+                        playerCell.textContent = score.playerName;
+                        
+                        const scoreCell = document.createElement('td');
+                        scoreCell.textContent = score.score;
+                        
+                        const dateCell = document.createElement('td');
+                        dateCell.textContent = new Date(score.timestamp).toLocaleDateString();
+                        
+                        row.appendChild(rankCell);
+                        row.appendChild(playerCell);
+                        row.appendChild(scoreCell);
+                        row.appendChild(dateCell);
+                        
+                        leaderboardBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    leaderboardBody.innerHTML = `<tr><td colspan="4">Error loading leaderboard: ${error.message}</td></tr>`;
+                });
+        }
+    </script>
+</body>
+</html>
